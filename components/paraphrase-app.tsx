@@ -32,6 +32,7 @@ import {
 } from "recharts"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import ReactMarkdown from "react-markdown"
+import { useTheme } from "next-themes"
 
 interface Metrics {
   tokensPerSecond: number
@@ -45,6 +46,7 @@ interface Metrics {
     tps: number
   }>
 }
+
 
 const ThinkingState = () => (
   <div className="flex flex-col space-y-4 p-4 bg-muted/50 rounded-lg border border-border/50">
@@ -428,102 +430,104 @@ export default function ParaphraseApp() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col p-4 bg-background">
-      <div className="flex gap-4 flex-1 h-[calc(100vh-2rem)]">
-        {/* Left side - Input */}
-        <div className="flex-1">
-          <CardContent className="h-full p-0 flex flex-col">
-            <div className="mb-2 flex items-center gap-2">
-              <ToggleGroup type="multiple" className="flex flex-wrap gap-1">
-                <ToggleGroupItem
-                  value="bold"
-                  onClick={() => insertMarkdownSyntax("bold")}
-                >
-                  <Bold className="h-4 w-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="italic"
-                  onClick={() => insertMarkdownSyntax("italic")}
-                >
-                  <Italic className="h-4 w-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="list"
-                  onClick={() => insertMarkdownSyntax("list")}
-                >
-                  <List className="h-4 w-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="orderedList"
-                  onClick={() => insertMarkdownSyntax("orderedList")}
-                >
-                  <ListOrdered className="h-4 w-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="quote"
-                  onClick={() => insertMarkdownSyntax("quote")}
-                >
-                  <Quote className="h-4 w-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="code"
-                  onClick={() => insertMarkdownSyntax("code")}
-                >
-                  <Code className="h-4 w-4" />
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-            <div className="flex-1 relative">
-              <Textarea
-                className="absolute inset-0 resize-none p-4 border rounded-md focus-visible:ring-1 font-mono"
-                placeholder="Write your content here... (Markdown supported)"
-                value={inputContent}
-                onChange={(e) => setInputContent(e.target.value)}
-              />
-            </div>
-            <div className="p-4 bg-muted/30 flex justify-between items-center mt-2 rounded-md">
-              <Button variant="outline" size="sm" onClick={clearContent}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Clear
-              </Button>
-              <Button onClick={paraphraseContent} disabled={loading}>
-                {loading ? (
-                  <>
-                    <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4 mr-2" />
-                    Paraphrase
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </div>
+    // <ParaphraseLayout>
+      <div className="fixed inset-0 flex flex-col p-4 bg-background">
+        <div className="flex gap-4 flex-1 h-[calc(100vh-2rem)]">
+          {/* Left side - Input */}
+          <div className="flex-1">
+            <CardContent className="h-full p-0 flex flex-col">
+              <div className="mb-2 flex items-center gap-2">
+                <ToggleGroup type="multiple" className="flex flex-wrap gap-1">
+                  <ToggleGroupItem
+                    value="bold"
+                    onClick={() => insertMarkdownSyntax("bold")}
+                  >
+                    <Bold className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value="italic"
+                    onClick={() => insertMarkdownSyntax("italic")}
+                  >
+                    <Italic className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value="list"
+                    onClick={() => insertMarkdownSyntax("list")}
+                  >
+                    <List className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value="orderedList"
+                    onClick={() => insertMarkdownSyntax("orderedList")}
+                  >
+                    <ListOrdered className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value="quote"
+                    onClick={() => insertMarkdownSyntax("quote")}
+                  >
+                    <Quote className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value="code"
+                    onClick={() => insertMarkdownSyntax("code")}
+                  >
+                    <Code className="h-4 w-4" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              <div className="flex-1 relative">
+                <Textarea
+                  className="absolute inset-0 resize-none p-4 border rounded-md focus-visible:ring-1 font-mono"
+                  placeholder="Write your content here... (Markdown supported)"
+                  value={inputContent}
+                  onChange={(e) => setInputContent(e.target.value)}
+                />
+              </div>
+              <div className="p-4 bg-muted/30 flex justify-between items-center mt-2 rounded-md">
+                <Button variant="outline" size="sm" onClick={clearContent}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear
+                </Button>
+                <Button onClick={paraphraseContent} disabled={loading}>
+                  {loading ? (
+                    <>
+                      <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Paraphrase
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </div>
 
-        {/* Right side - Output and Metrics */}
-        <div className="flex-1 flex flex-col gap-4">
-          {isThinking ? (
-            <ThinkingState />
-          ) : (
-            <>
-              <PerformanceMetrics metrics={metrics} />
-              <OutputContent
-                content={outputContent}
-                thinkingContent={thinkingContent}
-                isPreview={isPreview}
-                setIsPreview={setIsPreview}
-                onCopy={() => {
-                  navigator.clipboard.writeText(outputContent)
-                  toast.success("Copied to clipboard!")
-                }}
-              />
-            </>
-          )}
+          {/* Right side - Output and Metrics */}
+          <div className="flex-1 flex flex-col gap-4">
+            {isThinking ? (
+              <ThinkingState />
+            ) : (
+              <>
+                <PerformanceMetrics metrics={metrics} />
+                <OutputContent
+                  content={outputContent}
+                  thinkingContent={thinkingContent}
+                  isPreview={isPreview}
+                  setIsPreview={setIsPreview}
+                  onCopy={() => {
+                    navigator.clipboard.writeText(outputContent)
+                    toast.success("Copied to clipboard!")
+                  }}
+                />
+              </>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    // </ParaphraseLayout>
   )
 }
