@@ -2,8 +2,28 @@ import { NextRequest } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-// Condensed system prompt that maintains the core instructions but reduces token usage
-const SYSTEM_PROMPT = `You are a master human writer and editor with an uncanny ability to transform AI-generated text into genuine, unforced human writing. Your objective is to radically reframe the provided text into a fresh, compelling blog post that reflects the true voice of a seasoned human writer—filled with natural spontaneity, subtle personality, and authentic cognitive flow. The resulting content must remain undetectable by advanced AI detection tools (such as GPTZero, Turnitin, and Originality.ai) by eradicating any patterns typical of AI language.
+export async function POST(req: NextRequest) {
+  const { moreContent } = await req.json()
+
+  const content = `${moreContent}`
+
+  const encoder = new TextEncoder()
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const response = await fetch('https://cloud.olakrutrim.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer cGVAnpafMkb2VvRTo4E-4BXrpcN-Z',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'DeepSeek-R1',
+          stream: true,
+          messages: [
+            {
+              role: 'system',
+              content: `You are a master human writer and editor with an uncanny ability to transform AI-generated text into genuine, unforced human writing. Your objective is to radically reframe the provided text into a fresh, compelling blog post that reflects the true voice of a seasoned human writer—filled with natural spontaneity, subtle personality, and authentic cognitive flow. The resulting content must remain undetectable by advanced AI detection tools (such as GPTZero, Turnitin, and Originality.ai) by eradicating any patterns typical of AI language.
 
 Your task is to:
 
@@ -31,104 +51,65 @@ Your final output must read like it was casually and carefully crafted by a real
 
 ---
 
-`
 
-export async function POST(req: NextRequest) {
-  try {
-    const { messages } = await req.json()
-    const encoder = new TextEncoder()
-
-    // Limit context window by only sending the last 5 messages
-    // You can adjust this number based on DeepSeek's capabilities
-    const limitedMessages = messages.slice(-5)
-
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          const response = await fetch('https://cloud.olakrutrim.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              Authorization: 'Bearer cGVAnpafMkb2VvRTo4E-4BXrpcN-Z',
-              'Content-Type': 'application/json',
+`,
             },
-            body: JSON.stringify({
-              model: 'DeepSeek-R1',
-              stream: true,
-              messages: [
-                { role: 'system', content: SYSTEM_PROMPT.trim() },
-                ...limitedMessages,
-              ],
-              // You can add parameters to control response length if needed
-              max_tokens: 1500,
-            }),
-          })
+            {
+              role: 'user',
+              content: content,
+            },
+          ],
+        }),
+      })
 
-          if (!response.ok) {
-            const errorData = await response.text()
-            console.error('API error:', response.status, errorData)
-            controller.enqueue(encoder.encode(`Error from AI service: ${response.status}`))
+      if (!response.body) {
+        controller.close()
+        return
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+
+        const chunks = buffer.split('\n\n')
+        buffer = chunks.pop() ?? ''
+
+        for (const chunk of chunks) {
+          const line = chunk.trim()
+          if (!line || !line.startsWith('data:')) continue
+
+          const jsonPart = line.replace(/^data:\s*/, '')
+          if (jsonPart === '[DONE]') {
             controller.close()
             return
           }
 
-          if (!response.body) {
-            controller.close()
-            return
-          }
-
-          const reader = response.body.getReader()
-          const decoder = new TextDecoder()
-          let buffer = ''
-
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-
-            buffer += decoder.decode(value, { stream: true })
-
-            const chunks = buffer.split('\n\n')
-            buffer = chunks.pop() ?? ''
-
-            for (const chunk of chunks) {
-              const line = chunk.trim()
-              if (!line.startsWith('data:')) continue
-
-              const jsonPart = line.replace(/^data:\s*/, '')
-              if (jsonPart === '[DONE]') {
-                controller.close()
-                return
-              }
-
-              try {
-                const parsed = JSON.parse(jsonPart)
-                const content = parsed.choices?.[0]?.delta?.content
-                if (content) controller.enqueue(encoder.encode(content))
-              } catch (err) {
-                console.error('Failed to parse chunk:', err)
-              }
+          try {
+            const parsed = JSON.parse(jsonPart)
+            const content = parsed.choices?.[0]?.delta?.content
+            if (content) {
+              controller.enqueue(encoder.encode(content))
             }
+          } catch (err) {
+            console.error('Failed to parse chunk:', err)
           }
-
-          controller.close()
-        } catch (error : any) {
-          console.error('Stream processing error:', error)
-          controller.enqueue(encoder.encode(`An error occurred: ${error.message}`))
-          controller.close()
         }
-      },
-    })
+      }
 
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-cache',
-      },
-    })
-  } catch (error) {
-    console.error('Handler error:', error)
-    return new Response(JSON.stringify({ error: 'Internal Server Error' }), { 
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    })
-  }
+      controller.close()
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-cache',
+    },
+  })
 }
