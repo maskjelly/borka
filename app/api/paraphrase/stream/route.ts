@@ -44,7 +44,7 @@ Your task is to:
   - Organize ideas logically, but allow for organic digressions or slight asides that make the text sound human.
   - Use varied vocabulary that feels thoughtful and precise—never generic or overly optimized by machine standards.
   - Maintain a tone that is professional yet personable, as you would for a widely-read blog or a popular Reddit thread.
-
+  - 1300 words minimum
 • Execute a complete rewrite: do not recycle the original phrasing or sentence structures. Instead, completely rephrase and restructure the content while retaining the core meaning and key points.
 
 Your final output must read like it was casually and carefully crafted by a real writer—full of natural imperfections, spontaneous insights, and a truly human narrative flow. Now, analyze and rewrite the following text using these exact guidelines:

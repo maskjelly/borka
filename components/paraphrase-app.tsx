@@ -162,7 +162,10 @@ const OutputContent = ({ content, thinkingContent, isPreview, onCopy, setIsPrevi
       </div>
       {content && (
         <div className="p-4 bg-muted/30 flex justify-end mt-2 rounded-md">
-          <Button variant="outline" size="sm" onClick={onCopy}>
+          <Button variant="outline" size="sm" onClick={() => {
+              navigator.clipboard.writeText(content)
+              toast.success("Copied to clipboard!")
+            }}>
             <Copy className="h-4 w-4 mr-2" />
             Copy
           </Button>
@@ -247,7 +250,18 @@ export default function ParaphraseApp() {
     setIsThinking(true)
     startTime.current = Date.now()
     const startInputTokens = inputContent.split(/\s+/).length
-    const tpsDataPoints: Array<{ time: number; tps: number }> = []
+
+    // Initialize metrics including tpsData
+      setMetrics({
+        tokensPerSecond: 0,
+        wordCount: 0,
+        thinkingTime: 0,
+        processingTime: 0,
+        inputTokens: startInputTokens, // Set initial input tokens
+        outputTokens: 0,
+        tpsData: [], // Start with an empty array
+    });
+
 
     try {
       const response = await fetch("/api/paraphrase/stream", {
@@ -274,63 +288,70 @@ export default function ParaphraseApp() {
       let currentThinking = ""
       let finalOutput = ""
 
+      const initialProcessingStartTime = Date.now();
+
+
       while (true) {
         const { done, value } = await reader!.read()
         if (done) break
 
         const chunk = decoder.decode(value)
         buffer += chunk
-        totalTokens += chunk.split(/\s+/).length
+        const chunkTokens = chunk.split(/\s+/).filter(Boolean).length;
+        totalTokens += chunkTokens;
 
-        // Process buffer for <think> tags
         while (buffer.length > 0) {
-          if (!inThinkingMode && buffer.includes("<think>")) {
-            // Start of thinking mode
-            const parts = buffer.split("<think>", 2)
-            finalOutput += parts[0]
-            buffer = parts[1]
-            inThinkingMode = true
-            setOutputContent(finalOutput)
-          } else if (inThinkingMode && buffer.includes("</think>")) {
-            // End of thinking mode
-            const parts = buffer.split("</think>", 2)
-            currentThinking += parts[0]
-            buffer = parts[1]
-            inThinkingMode = false
-            setThinkingContent(currentThinking)
-          } else if (inThinkingMode) {
-            // In thinking mode, accumulate to thinking content
-            currentThinking += buffer
-            setThinkingContent(currentThinking)
-            buffer = ""
-          } else {
-            // Regular output
-            finalOutput += buffer
-            setOutputContent(finalOutput)
-            buffer = ""
+            if (!inThinkingMode && buffer.includes("<think>")) {
+              const parts = buffer.split("<think>", 2)
+              finalOutput += parts[0]
+              buffer = parts[1]
+              inThinkingMode = true;
+              setOutputContent(finalOutput);
+            } else if (inThinkingMode && buffer.includes("</think>")) {
+              const parts = buffer.split("</think>", 2)
+              currentThinking += parts[0]
+              buffer = parts[1]
+              inThinkingMode = false;
+              setThinkingContent(currentThinking)
+            } else if (inThinkingMode) {
+              currentThinking += buffer
+              setThinkingContent(currentThinking);
+              buffer = ""
+            } else {
+              finalOutput += buffer
+              setOutputContent(finalOutput);
+              buffer = ""
+            }
           }
-        }
 
-        const currentTime = (Date.now() - startTime.current) / 1000
-        const timeSinceLastUpdate = (Date.now() - lastUpdateTime) / 1000
+        const now = Date.now();
+        const currentProcessingTime = (now - initialProcessingStartTime) / 1000;
+        const totalElapsedTime = (now - startTime.current) / 1000;
 
-        if (timeSinceLastUpdate >= 0.5) {
-          // Update every 500ms
-          const currentTPS = totalTokens / (currentTime - thinkingTime)
-          tpsDataPoints.push({ time: currentTime, tps: currentTPS })
-          lastUpdateTime = Date.now()
-        }
+        const timeSinceLastUpdate = (now - lastUpdateTime) / 1000
 
-        setMetrics((prev) => ({
-          ...prev,
-          tokensPerSecond: totalTokens / (currentTime - thinkingTime),
-          wordCount: totalTokens,
-          thinkingTime,
-          processingTime: currentTime,
-          inputTokens: startInputTokens,
-          outputTokens: totalTokens,
-          tpsData: tpsDataPoints,
-        }))
+        const safeProcessingTime = Math.max(currentProcessingTime, 0.001);
+        const currentOverallTPS = totalTokens / safeProcessingTime;
+
+
+        setMetrics((prev) => {
+            let newTpsData = prev.tpsData;
+            if (timeSinceLastUpdate >= 0.5 && currentProcessingTime > 0) {
+                const newDataPoint = { time: totalElapsedTime, tps: currentOverallTPS };
+                newTpsData = [...prev.tpsData, newDataPoint];
+                lastUpdateTime = now;
+            }
+
+            return {
+              ...prev,
+              tokensPerSecond: currentOverallTPS,
+              wordCount: finalOutput.split(/\s+/).filter(Boolean).length,
+              thinkingTime: thinkingTime,
+              processingTime: totalElapsedTime,
+              outputTokens: totalTokens,
+              tpsData: newTpsData,
+            };
+        });
       }
     } catch (err) {
       console.error(err)
@@ -338,6 +359,10 @@ export default function ParaphraseApp() {
     } finally {
       setLoading(false)
       setIsThinking(false)
+      setMetrics(prev => ({
+        ...prev,
+        processingTime: (Date.now() - startTime.current) / 1000
+    }));
     }
   }
 
