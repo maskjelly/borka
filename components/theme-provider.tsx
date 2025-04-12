@@ -7,7 +7,7 @@ export function ThemeProvider({ children, ...props }: React.PropsWithChildren<Th
   return (
     <NextThemesProvider
       attribute="class"           // ✅ use "class" instead of "data-theme"
-      defaultTheme="dark"         // or "system" if you want OS-based
+      defaultTheme="light"         // or "system" if you want OS-based
       enableSystem={true}
       {...props}
     >

@@ -17,10 +17,19 @@ import {
   Quote,
   Code,
   Bot,
+  ChevronDown,
 } from "lucide-react"
 import { CardContent } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import ReactMarkdown from "react-markdown"
 
@@ -74,16 +83,34 @@ const PerformanceMetrics = ({ metrics }: { metrics: Metrics }) => (
     {metrics.tpsData.length > 0 && (
       <div className="h-40 mt-4">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={metrics.tpsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+          <AreaChart
+            data={metrics.tpsData}
+            margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
+          >
             <defs>
               <linearGradient id="tpsGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                <stop
+                  offset="5%"
+                  stopColor="var(--primary)"
+                  stopOpacity={0.2}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="var(--primary)"
+                  stopOpacity={0}
+                />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis dataKey="time" stroke="var(--muted-foreground)" tickFormatter={(value) => `${value.toFixed(1)}s`} />
-            <YAxis stroke="var(--muted-foreground)" tickFormatter={(value) => `${value.toFixed(0)}`} />
+            <XAxis
+              dataKey="time"
+              stroke="var(--muted-foreground)"
+              tickFormatter={(value) => `${value.toFixed(1)}s`}
+            />
+            <YAxis
+              stroke="var(--muted-foreground)"
+              tickFormatter={(value) => `${value.toFixed(0)}`}
+            />
             <Tooltip
               contentStyle={{
                 backgroundColor: "var(--background)",
@@ -93,7 +120,13 @@ const PerformanceMetrics = ({ metrics }: { metrics: Metrics }) => (
               labelFormatter={(value) => `Time: ${Number(value).toFixed(1)}s`}
               formatter={(value: any) => [`${Number(value).toFixed(2)} tok/s`, "TPS"]}
             />
-            <Area type="monotone" dataKey="tps" stroke="var(--primary)" fill="url(#tpsGradient)" strokeWidth={2} />
+            <Area
+              type="monotone"
+              dataKey="tps"
+              stroke="var(--primary)"
+              fill="url(#tpsGradient)"
+              strokeWidth={2}
+            />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -109,10 +142,25 @@ interface OutputContentProps {
   setIsPreview: (value: boolean) => void
 }
 
-const OutputContent = ({ content, thinkingContent, isPreview, onCopy, setIsPreview }: OutputContentProps) => {
+const OutputContent = ({
+  content,
+  thinkingContent,
+  isPreview,
+  onCopy,
+  setIsPreview,
+}: OutputContentProps) => {
+  const outputRef = useRef<HTMLDivElement>(null)
+  const [isThinkingExpanded, setIsThinkingExpanded] = useState(true)
+
+  useEffect(() => {
+    if (outputRef.current) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight
+    }
+  }, [content, thinkingContent, isPreview])
+
   return (
-    <div className="flex-1 flex flex-col">
-      <div className="mb-2">
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <div className="mb-2 flex-shrink-0">
         <ToggleGroup
           type="single"
           value={isPreview ? "preview" : "raw"}
@@ -122,50 +170,66 @@ const OutputContent = ({ content, thinkingContent, isPreview, onCopy, setIsPrevi
           <ToggleGroupItem value="preview">Preview</ToggleGroupItem>
         </ToggleGroup>
       </div>
-      <div className="flex-1 p-4 bg-muted/50 rounded-lg border border-border/50 text-sm whitespace-pre-wrap overflow-y-auto">
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0">
-            <Bot className="h-5 w-5 text-primary mt-1" />
-          </div>
-          <div className="flex-1 space-y-2">
-            {thinkingContent && (
-              <div className="mb-4 p-3 bg-muted/80 border border-border/50 rounded-md">
-                <div className="flex items-center gap-2 mb-2">
-                  <Brain className="h-4 w-4 text-amber-500" />
-                  <span className="text-xs font-medium text-amber-500">AI Thinking Process</span>
-                </div>
-                <div className="text-muted-foreground text-sm font-mono">
-                  {isPreview ? (
-                    <div className="prose prose-neutral dark:prose-invert max-w-none prose-sm opacity-70">
-                      <ReactMarkdown>{thinkingContent}</ReactMarkdown>
+      <div className="flex-1 min-h-0 relative">
+        <div
+          ref={outputRef}
+          className="absolute inset-0 p-4 bg-muted/50 rounded-lg border border-border/50 text-sm overflow-y-auto"
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <Bot className="h-5 w-5 text-primary mt-1" />
+            </div>
+            <div className="flex-1 space-y-2">
+              {thinkingContent && (
+                <div className="mb-4 bg-muted/80 border border-border/50 rounded-md overflow-hidden">
+                  <button
+                    onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
+                    className="w-full p-3 flex items-center gap-2 hover:bg-muted/50 transition-colors"
+                  >
+                    <Brain className="h-4 w-4 text-amber-500" />
+                    <span className="text-xs font-medium text-amber-500">
+                      AI Thinking Process
+                    </span>
+                    <ChevronDown
+                      className={`h-4 w-4 ml-auto transition-transform ${
+                        isThinkingExpanded ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                  {isThinkingExpanded && (
+                    <div className="p-3 pt-0 text-muted-foreground text-sm font-mono border-t border-border/50">
+                      {isPreview ? (
+                        <div className="prose prose-neutral dark:prose-invert max-w-none prose-sm opacity-70">
+                          <ReactMarkdown>{thinkingContent}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        thinkingContent
+                      )}
                     </div>
-                  ) : (
-                    thinkingContent
                   )}
                 </div>
-              </div>
-            )}
+              )}
 
-            {content ? (
-              isPreview ? (
-                <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <ReactMarkdown>{content}</ReactMarkdown>
-                </div>
-              ) : (
-                content
-              )
-            ) : (
-              "Paraphrased content will appear here..."
-            )}
+              <div className="min-h-[100px]">
+                {content ? (
+                  isPreview ? (
+                    <div className="prose prose-neutral dark:prose-invert max-w-none">
+                      <ReactMarkdown>{content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    content
+                  )
+                ) : (
+                  "Paraphrased content will appear here..."
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
       {content && (
-        <div className="p-4 bg-muted/30 flex justify-end mt-2 rounded-md">
-          <Button variant="outline" size="sm" onClick={() => {
-              navigator.clipboard.writeText(content)
-              toast.success("Copied to clipboard!")
-            }}>
+        <div className="p-4 bg-muted/30 flex justify-end mt-2 rounded-md flex-shrink-0">
+          <Button variant="outline" size="sm" onClick={onCopy}>
             <Copy className="h-4 w-4 mr-2" />
             Copy
           </Button>
@@ -252,16 +316,15 @@ export default function ParaphraseApp() {
     const startInputTokens = inputContent.split(/\s+/).length
 
     // Initialize metrics including tpsData
-      setMetrics({
-        tokensPerSecond: 0,
-        wordCount: 0,
-        thinkingTime: 0,
-        processingTime: 0,
-        inputTokens: startInputTokens, // Set initial input tokens
-        outputTokens: 0,
-        tpsData: [], // Start with an empty array
-    });
-
+    setMetrics({
+      tokensPerSecond: 0,
+      wordCount: 0,
+      thinkingTime: 0,
+      processingTime: 0,
+      inputTokens: startInputTokens, // Set initial input tokens
+      outputTokens: 0,
+      tpsData: [], // Start with an empty array
+    })
 
     try {
       const response = await fetch("/api/paraphrase/stream", {
@@ -288,8 +351,7 @@ export default function ParaphraseApp() {
       let currentThinking = ""
       let finalOutput = ""
 
-      const initialProcessingStartTime = Date.now();
-
+      const initialProcessingStartTime = Date.now()
 
       while (true) {
         const { done, value } = await reader!.read()
@@ -297,61 +359,60 @@ export default function ParaphraseApp() {
 
         const chunk = decoder.decode(value)
         buffer += chunk
-        const chunkTokens = chunk.split(/\s+/).filter(Boolean).length;
-        totalTokens += chunkTokens;
+        const chunkTokens = chunk.split(/\s+/).filter(Boolean).length
+        totalTokens += chunkTokens
 
         while (buffer.length > 0) {
-            if (!inThinkingMode && buffer.includes("<think>")) {
-              const parts = buffer.split("<think>", 2)
-              finalOutput += parts[0]
-              buffer = parts[1]
-              inThinkingMode = true;
-              setOutputContent(finalOutput);
-            } else if (inThinkingMode && buffer.includes("</think>")) {
-              const parts = buffer.split("</think>", 2)
-              currentThinking += parts[0]
-              buffer = parts[1]
-              inThinkingMode = false;
-              setThinkingContent(currentThinking)
-            } else if (inThinkingMode) {
-              currentThinking += buffer
-              setThinkingContent(currentThinking);
-              buffer = ""
-            } else {
-              finalOutput += buffer
-              setOutputContent(finalOutput);
-              buffer = ""
-            }
+          if (!inThinkingMode && buffer.includes("<think>")) {
+            const parts = buffer.split("<think>", 2)
+            finalOutput += parts[0]
+            buffer = parts[1]
+            inThinkingMode = true
+            setOutputContent(finalOutput)
+          } else if (inThinkingMode && buffer.includes("</think>")) {
+            const parts = buffer.split("</think>", 2)
+            currentThinking += parts[0]
+            buffer = parts[1]
+            inThinkingMode = false
+            setThinkingContent(currentThinking)
+          } else if (inThinkingMode) {
+            currentThinking += buffer
+            setThinkingContent(currentThinking)
+            buffer = ""
+          } else {
+            finalOutput += buffer
+            setOutputContent(finalOutput)
+            buffer = ""
           }
+        }
 
-        const now = Date.now();
-        const currentProcessingTime = (now - initialProcessingStartTime) / 1000;
-        const totalElapsedTime = (now - startTime.current) / 1000;
+        const now = Date.now()
+        const currentProcessingTime = (now - initialProcessingStartTime) / 1000
+        const totalElapsedTime = (now - startTime.current) / 1000
 
         const timeSinceLastUpdate = (now - lastUpdateTime) / 1000
 
-        const safeProcessingTime = Math.max(currentProcessingTime, 0.001);
-        const currentOverallTPS = totalTokens / safeProcessingTime;
-
+        const safeProcessingTime = Math.max(currentProcessingTime, 0.001)
+        const currentOverallTPS = totalTokens / safeProcessingTime
 
         setMetrics((prev) => {
-            let newTpsData = prev.tpsData;
-            if (timeSinceLastUpdate >= 0.5 && currentProcessingTime > 0) {
-                const newDataPoint = { time: totalElapsedTime, tps: currentOverallTPS };
-                newTpsData = [...prev.tpsData, newDataPoint];
-                lastUpdateTime = now;
-            }
+          let newTpsData = prev.tpsData
+          if (timeSinceLastUpdate >= 0.5 && currentProcessingTime > 0) {
+            const newDataPoint = { time: totalElapsedTime, tps: currentOverallTPS }
+            newTpsData = [...prev.tpsData, newDataPoint]
+            lastUpdateTime = now
+          }
 
-            return {
-              ...prev,
-              tokensPerSecond: currentOverallTPS,
-              wordCount: finalOutput.split(/\s+/).filter(Boolean).length,
-              thinkingTime: thinkingTime,
-              processingTime: totalElapsedTime,
-              outputTokens: totalTokens,
-              tpsData: newTpsData,
-            };
-        });
+          return {
+            ...prev,
+            tokensPerSecond: currentOverallTPS,
+            wordCount: finalOutput.split(/\s+/).filter(Boolean).length,
+            thinkingTime: thinkingTime,
+            processingTime: totalElapsedTime,
+            outputTokens: totalTokens,
+            tpsData: newTpsData,
+          }
+        })
       }
     } catch (err) {
       console.error(err)
@@ -359,10 +420,10 @@ export default function ParaphraseApp() {
     } finally {
       setLoading(false)
       setIsThinking(false)
-      setMetrics(prev => ({
+      setMetrics((prev) => ({
         ...prev,
-        processingTime: (Date.now() - startTime.current) / 1000
-    }));
+        processingTime: (Date.now() - startTime.current) / 1000,
+      }))
     }
   }
 
@@ -374,22 +435,40 @@ export default function ParaphraseApp() {
           <CardContent className="h-full p-0 flex flex-col">
             <div className="mb-2 flex items-center gap-2">
               <ToggleGroup type="multiple" className="flex flex-wrap gap-1">
-                <ToggleGroupItem value="bold" onClick={() => insertMarkdownSyntax("bold")}>
+                <ToggleGroupItem
+                  value="bold"
+                  onClick={() => insertMarkdownSyntax("bold")}
+                >
                   <Bold className="h-4 w-4" />
                 </ToggleGroupItem>
-                <ToggleGroupItem value="italic" onClick={() => insertMarkdownSyntax("italic")}>
+                <ToggleGroupItem
+                  value="italic"
+                  onClick={() => insertMarkdownSyntax("italic")}
+                >
                   <Italic className="h-4 w-4" />
                 </ToggleGroupItem>
-                <ToggleGroupItem value="list" onClick={() => insertMarkdownSyntax("list")}>
+                <ToggleGroupItem
+                  value="list"
+                  onClick={() => insertMarkdownSyntax("list")}
+                >
                   <List className="h-4 w-4" />
                 </ToggleGroupItem>
-                <ToggleGroupItem value="orderedList" onClick={() => insertMarkdownSyntax("orderedList")}>
+                <ToggleGroupItem
+                  value="orderedList"
+                  onClick={() => insertMarkdownSyntax("orderedList")}
+                >
                   <ListOrdered className="h-4 w-4" />
                 </ToggleGroupItem>
-                <ToggleGroupItem value="quote" onClick={() => insertMarkdownSyntax("quote")}>
+                <ToggleGroupItem
+                  value="quote"
+                  onClick={() => insertMarkdownSyntax("quote")}
+                >
                   <Quote className="h-4 w-4" />
                 </ToggleGroupItem>
-                <ToggleGroupItem value="code" onClick={() => insertMarkdownSyntax("code")}>
+                <ToggleGroupItem
+                  value="code"
+                  onClick={() => insertMarkdownSyntax("code")}
+                >
                   <Code className="h-4 w-4" />
                 </ToggleGroupItem>
               </ToggleGroup>
